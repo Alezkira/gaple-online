@@ -124,6 +124,15 @@
   .modal .recap div{display:flex; justify-content:space-between; padding:2px 0;}
   .modal button{margin-top:10px; border:none; border-radius:12px; padding:11px 18px; background:linear-gradient(160deg,#e8bc6a,var(--gold)); color:#2b1c04; font-weight:800; font-size:14.5px; width:100%; box-shadow:0 4px 12px rgba(217,164,65,0.35);}
   .modal button:active{transform:scale(0.97);}
+  #chat-toggle{position:fixed; bottom:calc(90px + env(safe-area-inset-bottom,0px)); right:10px; width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.2); color:#fff; font-size:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:50;}
+  #chat-panel{position:fixed; bottom:calc(140px + env(safe-area-inset-bottom,0px)); right:10px; width:250px; max-height:300px; background:rgba(15,10,5,0.95); border:1px solid rgba(217,164,65,0.3); border-radius:12px; display:none; flex-direction:column; z-index:50; overflow:hidden;}
+  #chat-panel.show{display:flex;}
+  #chat-messages{flex:1; overflow-y:auto; padding:10px; font-size:12px; max-height:240px;}
+  .chat-msg{margin-bottom:6px;}
+  .chat-msg .author{font-weight:700; color:var(--gold);}
+  #chat-input-wrap{display:flex; border-top:1px solid rgba(255,255,255,0.1);}
+  #chat-input-wrap input{flex:1; padding:8px 10px; background:transparent; border:none; color:#fff; font-size:12px; outline:none;}
+  #chat-input-wrap button{padding:8px 12px; background:var(--gold); border:none; color:#2b1c04; font-weight:700; font-size:12px; cursor:pointer;}
 </style>
 </head>
 <body>
@@ -167,6 +176,14 @@
   <div id="ghost"></div>
 </div>
 <div id="modalov"><div class="modal" id="modalbox"></div></div>
+<div id="chat-toggle" onclick="toggleChat()">💬</div>
+<div id="chat-panel">
+  <div id="chat-messages"></div>
+  <div id="chat-input-wrap">
+    <input type="text" id="chat-input" placeholder="Ketik pesan..." maxlength="200">
+    <button onclick="sendChat()">Kirim</button>
+  </div>
+</div>
 
 <script>
 // ===== CONSTANTS (same as original) =====
@@ -546,10 +563,25 @@ function showToast(msg){
 }
 function appendChat(msg){
   const container=document.getElementById('chat-messages');
+  if(!container)return;
   const div=document.createElement('div');div.className='chat-msg';
   div.innerHTML=`<span class="author">${msg.username}:</span> ${msg.text}`;
   container.appendChild(div);container.scrollTop=container.scrollHeight;
 }
+function toggleChat(){document.getElementById('chat-panel').classList.toggle('show');}
+function sendChat(){
+  const input=document.getElementById('chat-input');
+  const text=input.value.trim();
+  if(!text)return;
+  if(!socket||!socket.connected){showToast('Koneksi terputus');return;}
+  socket.emit('chat-message',text,(ack)=>{
+    if(!ack||!ack.success)showToast('Gagal kirim: '+(ack?.error||'koneksi'));
+  });
+  input.value='';
+}
+document.getElementById('chat-input').addEventListener('keypress',(e)=>{
+  if(e.key==='Enter')sendChat();
+});
 
 // ===== RESIZE =====
 window.addEventListener('resize',()=>{if(gameReady)renderBoard(false);});

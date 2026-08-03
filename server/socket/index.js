@@ -52,13 +52,22 @@ module.exports = function(io, db) {
                     return callback({ success: false, error: 'Game sudah dimulai' });
                 }
 
-                if (room.players.length >= 4) {
-                    return callback({ success: false, error: 'Room penuh' });
+                // Cek sudah join - jika sudah, update socketId saja
+                const existingPlayer = room.players.find(p => p.id === socket.userId);
+                if (existingPlayer) {
+                    // Update socketId
+                    existingPlayer.socketId = socket.id;
+                    socket.join(roomCode);
+                    socket.roomCode = roomCode;
+                    
+                    // Broadcast update
+                    io.to(roomCode).emit('room-update', room.getPublicInfo());
+                    
+                    return callback({ success: true, room: room.getPublicInfo(), seat: existingPlayer.seat });
                 }
 
-                // Cek sudah join
-                if (room.players.some(p => p.id === socket.userId)) {
-                    return callback({ success: false, error: 'Sudah di room' });
+                if (room.players.length >= 4) {
+                    return callback({ success: false, error: 'Room penuh' });
                 }
 
                 const seat = room.addPlayer(socket.userId, socket.username, socket.id);

@@ -18,22 +18,14 @@
             --red-pip: #b0342a;
             --teamA: #d9a441;
             --teamB: #3f8f8a;
-            --danger: #c0453a;
-            --tile-len: 58px;
-            --tile-thick: 28px;
             --safe-top: env(safe-area-inset-top, 0px);
             --safe-bottom: env(safe-area-inset-bottom, 0px);
         }
 
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         html, body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
+            margin: 0; padding: 0; height: 100%;
             background: #08160f;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             color: var(--cream);
@@ -43,779 +35,197 @@
         }
 
         #app {
-            position: fixed;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            background:
-                radial-gradient(120% 90% at 50% 0%, rgba(255, 222, 150, 0.10), transparent 60%),
-                linear-gradient(180deg, var(--felt-2), var(--felt-1) 40%, var(--felt-2));
+            position: fixed; inset: 0;
+            display: flex; flex-direction: column;
+            background: radial-gradient(120% 90% at 50% 0%, rgba(255,222,150,0.10), transparent 60%),
+                        linear-gradient(180deg, var(--felt-2), var(--felt-1) 40%, var(--felt-2));
         }
 
-        /* TOPBAR */
         #topbar {
             padding-top: calc(8px + var(--safe-top));
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding-left: 12px;
-            padding-right: 12px;
-            padding-bottom: 6px;
-            background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), transparent);
+            display: flex; align-items: center; justify-content: space-between;
+            padding-left: 12px; padding-right: 12px; padding-bottom: 6px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.35), transparent);
             z-index: 40;
         }
 
         .score-chip {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 5px 12px;
-            border-radius: 12px;
-            min-width: 74px;
-            background: rgba(0, 0, 0, 0.28);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex; flex-direction: column; align-items: center;
+            padding: 5px 12px; border-radius: 12px; min-width: 74px;
+            background: rgba(0,0,0,0.28);
+            border: 1px solid rgba(255,255,255,0.08);
         }
 
-        .score-chip .lbl {
-            font-size: 10px;
-            letter-spacing: 0.06em;
-            opacity: 0.75;
-            text-transform: uppercase;
-        }
+        .score-chip .lbl { font-size: 10px; letter-spacing: 0.06em; opacity: 0.75; text-transform: uppercase; }
+        .score-chip .val { font-size: 22px; font-weight: 800; line-height: 1.1; }
+        .score-chip.teamA .val { color: var(--teamA); }
+        .score-chip.teamB .val { color: var(--teamB); }
+        .score-chip.turn-glow { box-shadow: 0 0 0 2px var(--gold), 0 0 14px 2px rgba(217,164,65,0.6); }
 
-        .score-chip .val {
-            font-size: 22px;
-            font-weight: 800;
-            line-height: 1.1;
-        }
+        #roundlbl { font-size: 12px; opacity: 0.8; text-align: center; }
+        #roundlbl b { color: var(--gold); font-size: 13px; }
 
-        .score-chip.teamA .val {
-            color: var(--teamA);
-        }
+        #toastwrap { position: absolute; top: calc(54px + var(--safe-top)); left: 0; right: 0; display: flex; justify-content: center; pointer-events: none; z-index: 50; }
+        .toast { background: rgba(15,10,5,0.88); border: 1px solid rgba(217,164,65,0.35); color: var(--cream); padding: 7px 16px; border-radius: 999px; font-size: 12.5px; box-shadow: 0 4px 14px rgba(0,0,0,0.4); opacity: 0; transform: translateY(-6px); transition: opacity 0.25s ease, transform 0.25s ease; max-width: 88vw; text-align: center; }
+        .toast.show { opacity: 1; transform: translateY(0); }
 
-        .score-chip.teamB .val {
-            color: var(--teamB);
-        }
+        #tablewrap { flex: 1; position: relative; margin: 2px 8px; border-radius: 22px; background: radial-gradient(120% 100% at 50% 40%, rgba(255,255,255,0.05), transparent 55%), linear-gradient(160deg, var(--wood-1), var(--wood-2)); padding: 9px; box-shadow: inset 0 0 0 2px rgba(0,0,0,0.25); min-height: 0; }
+        #table { position: relative; width: 100%; height: 100%; border-radius: 16px; background: radial-gradient(90% 70% at 50% 38%, rgba(255,255,255,0.06), transparent 60%), radial-gradient(140% 100% at 50% 100%, rgba(0,0,0,0.35), transparent 55%), var(--felt-1); box-shadow: inset 0 0 26px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,222,150,0.08); overflow: hidden; }
 
-        .score-chip.turn-glow {
-            box-shadow: 0 0 0 2px var(--gold), 0 0 14px 2px rgba(217, 164, 65, 0.6);
-        }
+        .seat { position: absolute; display: flex; align-items: center; gap: 5px; z-index: 5; }
+        .seat .avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(160deg,#3a3a3a,#181818); display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid rgba(255,255,255,0.15); flex-shrink: 0; }
+        .seat.active .avatar { border-color: var(--gold); box-shadow: 0 0 10px 2px rgba(217,164,65,0.7); }
+        .seat .meta { display: flex; flex-direction: column; line-height: 1.15; }
+        .seat .name { font-size: 10.5px; font-weight: 700; color: var(--cream); white-space: nowrap; }
+        .seat .count { font-size: 9.5px; opacity: 0.7; }
+        .seat.teamA .name { color: var(--teamA); }
+        .seat.teamB .name { color: var(--teamB); }
 
-        #roundlbl {
-            font-size: 12px;
-            opacity: 0.8;
-            text-align: center;
-        }
+        #seat-top { top: 6px; left: 50%; transform: translateX(-50%); flex-direction: column; }
+        #seat-top .meta { align-items: center; }
+        #seat-left { top: 50%; left: 6px; transform: translateY(-50%); flex-direction: column; }
+        #seat-left .meta { align-items: flex-start; }
+        #seat-right { top: 50%; right: 6px; transform: translateY(-50%); flex-direction: column-reverse; }
+        #seat-right .meta { align-items: flex-end; }
 
-        #roundlbl b {
-            color: var(--gold);
-            font-size: 13px;
-        }
+        .backfan { display: flex; gap: -6px; }
+        .tileback { width: 16px; height: 22px; border-radius: 3px; margin-left: -6px; background: linear-gradient(150deg,#7a2f2f,#4a1717); border: 1px solid rgba(255,222,150,0.35); box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        #seat-top .backfan .tileback:first-child, #seat-left .backfan .tileback:first-child, #seat-right .backfan .tileback:first-child { margin-left: 0; }
+        #seat-left .backfan, #seat-right .backfan { flex-direction: column; gap: 0; }
+        #seat-left .backfan .tileback, #seat-right .backfan .tileback { width: 22px; height: 16px; margin-left: 0; margin-top: -9px; }
+        #seat-left .backfan .tileback:first-child, #seat-right .backfan .tileback:first-child { margin-top: 0; }
 
-        /* TOAST */
-        #toastwrap {
-            position: absolute;
-            top: calc(54px + var(--safe-top));
-            left: 0;
-            right: 0;
-            display: flex;
-            justify-content: center;
-            pointer-events: none;
-            z-index: 50;
-        }
+        .thinkbubble { position: absolute; top: -26px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,0.94); color: #333; border-radius: 10px; padding: 2px 7px; font-size: 13px; font-weight: 800; letter-spacing: 1px; opacity: 0; transition: opacity 0.2s ease; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.35); }
+        .thinkbubble.show { opacity: 1; animation: think-pulse 0.9s infinite ease-in-out; }
+        .thinkbubble::after { content: ""; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: rgba(255,255,255,0.94); }
+        @keyframes think-pulse { 0%,100%{transform:translateX(-50%) scale(1);} 50%{transform:translateX(-50%) scale(1.08);} }
 
-        .toast {
-            background: rgba(15, 10, 5, 0.88);
-            border: 1px solid rgba(217, 164, 65, 0.35);
-            color: var(--cream);
-            padding: 7px 16px;
-            border-radius: 999px;
-            font-size: 12.5px;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-            opacity: 0;
-            transform: translateY(-6px);
-            transition: opacity 0.25s ease, transform 0.25s ease;
-            max-width: 88vw;
-            text-align: center;
-        }
-
-        .toast.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* TABLE */
-        #tablewrap {
-            flex: 1;
-            position: relative;
-            margin: 2px 8px;
-            border-radius: 22px;
-            background:
-                radial-gradient(120% 100% at 50% 40%, rgba(255, 255, 255, 0.05), transparent 55%),
-                linear-gradient(160deg, var(--wood-1), var(--wood-2));
-            padding: 9px;
-            box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.25);
-            min-height: 0;
-        }
-
-        #table {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            border-radius: 16px;
-            background:
-                radial-gradient(90% 70% at 50% 38%, rgba(255, 255, 255, 0.06), transparent 60%),
-                radial-gradient(140% 100% at 50% 100%, rgba(0, 0, 0, 0.35), transparent 55%),
-                var(--felt-1);
-            box-shadow: inset 0 0 26px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 222, 150, 0.08);
-            overflow: hidden;
-        }
-
-        /* SEATS */
-        .seat {
-            position: absolute;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            z-index: 5;
-        }
-
-        .seat .avatar {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background: linear-gradient(160deg, #3a3a3a, #181818);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            border: 2px solid rgba(255, 255, 255, 0.15);
-            flex-shrink: 0;
-        }
-
-        .seat.active .avatar {
-            border-color: var(--gold);
-            box-shadow: 0 0 10px 2px rgba(217, 164, 65, 0.7);
-        }
-
-        .seat .meta {
-            display: flex;
-            flex-direction: column;
-            line-height: 1.15;
-        }
-
-        .seat .name {
-            font-size: 10.5px;
-            font-weight: 700;
-            color: var(--cream);
-            white-space: nowrap;
-        }
-
-        .seat .count {
-            font-size: 9.5px;
-            opacity: 0.7;
-        }
-
-        .seat .elo {
-            font-size: 9px;
-            opacity: 0.85;
-            font-weight: 700;
-            color: var(--gold);
-        }
-
-        .seat.teamA .name {
-            color: var(--teamA);
-        }
-
-        .seat.teamB .name {
-            color: var(--teamB);
-        }
-
-        #seat-top {
-            top: 6px;
-            left: 50%;
-            transform: translateX(-50%);
-            flex-direction: column;
-        }
-
-        #seat-top .meta {
-            align-items: center;
-        }
-
-        #seat-left {
-            top: 50%;
-            left: 6px;
-            transform: translateY(-50%);
-            flex-direction: column;
-        }
-
-        #seat-left .meta {
-            align-items: flex-start;
-        }
-
-        #seat-right {
-            top: 50%;
-            right: 6px;
-            transform: translateY(-50%);
-            flex-direction: column-reverse;
-        }
-
-        #seat-right .meta {
-            align-items: flex-end;
-        }
-
-        .backfan {
-            display: flex;
-            gap: -6px;
-        }
-
-        .tileback {
-            width: 16px;
-            height: 22px;
-            border-radius: 3px;
-            margin-left: -6px;
-            background: linear-gradient(150deg, #7a2f2f, #4a1717);
-            border: 1px solid rgba(255, 222, 150, 0.35);
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-        }
-
-        #seat-top .backfan .tileback:first-child,
-        #seat-left .backfan .tileback:first-child,
-        #seat-right .backfan .tileback:first-child {
-            margin-left: 0;
-        }
-
-        #seat-left .backfan,
-        #seat-right .backfan {
-            flex-direction: column;
-            gap: 0;
-        }
-
-        #seat-left .backfan .tileback,
-        #seat-right .backfan .tileback {
-            width: 22px;
-            height: 16px;
-            margin-left: 0;
-            margin-top: -9px;
-        }
-
-        #seat-left .backfan .tileback:first-child,
-        #seat-right .backfan .tileback:first-child {
-            margin-top: 0;
-        }
-
-        .thinkbubble {
-            position: absolute;
-            top: -26px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.94);
-            color: #333;
-            border-radius: 10px;
-            padding: 2px 7px;
-            font-size: 13px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-            white-space: nowrap;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-        }
-
-        .thinkbubble.show {
-            opacity: 1;
-            animation: think-pulse 0.9s infinite ease-in-out;
-        }
-
-        .thinkbubble::after {
-            content: "";
-            position: absolute;
-            bottom: -5px;
-            left: 50%;
-            transform: translateX(-50%);
-            border: 5px solid transparent;
-            border-top-color: rgba(255, 255, 255, 0.94);
-        }
-
-        @keyframes think-pulse {
-            0%, 100% { transform: translateX(-50%) scale(1); }
-            50% { transform: translateX(-50%) scale(1.08); }
-        }
-
-        /* BOARD */
-        #board {
-            position: absolute;
-            inset: 0;
-        }
+        #board { position: absolute; inset: 0; overflow: hidden; }
 
         .btile {
-            position: absolute;
-            border-radius: 5px;
+            position: absolute; border-radius: 5px;
             background: linear-gradient(160deg, var(--ivory), #ece1c8);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(0,0,0,0.15);
             display: flex;
-            transition: box-shadow 0.2s ease;
         }
+        .btile.horiz { flex-direction: row; }
+        .btile.vert { flex-direction: column; }
+        .btile .half { flex: 1; position: relative; }
+        .btile.horiz .half:first-child { border-right: 1.5px solid rgba(0,0,0,0.35); }
+        .btile.vert .half:first-child { border-bottom: 1.5px solid rgba(0,0,0,0.35); }
+        .btile.enter { animation: tile-drop 0.38s cubic-bezier(.2,.9,.35,1.15); }
+        @keyframes tile-drop { 0%{transform:scale(0.35);opacity:0;} 70%{transform:scale(1.08);opacity:1;} 100%{transform:scale(1);opacity:1;} }
 
-        .btile.horiz {
-            flex-direction: row;
-        }
+        .pipgrid { position: absolute; inset: 6%; display: grid; grid-template-columns: repeat(3,1fr); grid-template-rows: repeat(3,1fr); }
+        .pip { margin: auto; border-radius: 50%; box-shadow: 0 0.5px 1px rgba(0,0,0,0.3); }
+        .pip.blk { background: radial-gradient(circle at 35% 30%, #4a4a4a,#0a0a0a); }
+        .pip.red { background: radial-gradient(circle at 35% 30%, #e0685c, var(--red-pip)); }
 
-        .btile.vert {
-            flex-direction: column;
-        }
+        #handzone { position: relative; z-index: 30; padding: 8px 6px calc(8px + var(--safe-bottom)); display: flex; flex-direction: column; align-items: center; background: linear-gradient(0deg, rgba(0,0,0,0.4), transparent); }
+        #player-info { display: flex; align-items: center; gap: 10px; padding-bottom: 4px; }
+        #player-info .name { font-size: 11px; opacity: 0.8; }
+        #player-info .elo { font-size: 11px; font-weight: 800; color: var(--gold); }
 
-        .btile .half {
-            flex: 1;
-            position: relative;
-        }
-
-        .btile.horiz .half:first-child {
-            border-right: 1.5px solid rgba(0, 0, 0, 0.35);
-        }
-
-        .btile.vert .half:first-child {
-            border-bottom: 1.5px solid rgba(0, 0, 0, 0.35);
-        }
-
-        .btile.enter {
-            animation: tile-drop 0.38s cubic-bezier(0.2, 0.9, 0.35, 1.15);
-        }
-
-        @keyframes tile-drop {
-            0% { transform: scale(0.35) rotate(var(--rot, 0deg)); opacity: 0; }
-            70% { transform: scale(1.08) rotate(var(--rot, 0deg)); opacity: 1; }
-            100% { transform: scale(1) rotate(var(--rot, 0deg)); opacity: 1; }
-        }
-
-        .pipgrid {
-            position: absolute;
-            inset: 6%;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-        }
-
-        .pip {
-            margin: auto;
-            border-radius: 50%;
-            box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.3);
-        }
-
-        .pip.blk {
-            background: radial-gradient(circle at 35% 30%, #4a4a4a, #0a0a0a);
-        }
-
-        .pip.red {
-            background: radial-gradient(circle at 35% 30%, #e0685c, var(--red-pip));
-        }
-
-        /* HUMAN HAND */
-        #handzone {
-            position: relative;
-            z-index: 30;
-            padding: 8px 6px calc(8px + var(--safe-bottom));
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: linear-gradient(0deg, rgba(0, 0, 0, 0.4), transparent);
-        }
-
-        #player-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding-bottom: 4px;
-        }
-
-        #player-info .name {
-            font-size: 11px;
-            opacity: 0.8;
-        }
-
-        #player-info .elo {
-            font-size: 11px;
-            font-weight: 800;
-            color: var(--gold);
-        }
-
-        #hand {
-            display: flex;
-            gap: 6px;
-            justify-content: center;
-            align-items: flex-end;
-            overflow-x: auto;
-            max-width: 100%;
-            padding: 4px 2px 2px;
-        }
+        #hand { display: flex; gap: 6px; justify-content: center; align-items: flex-end; overflow-x: auto; max-width: 100%; padding: 4px 2px 2px; }
 
         .htile {
-            position: relative;
-            flex-shrink: 0;
-            width: 44px;
-            height: 80px;
-            border-radius: 6px;
+            position: relative; flex-shrink: 0;
+            width: 44px; height: 80px; border-radius: 6px;
             background: linear-gradient(160deg, var(--ivory), #ece1c8);
-            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(0, 0, 0, 0.15);
-            display: flex;
-            flex-direction: column;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(0,0,0,0.15);
+            display: flex; flex-direction: column;
             transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
             touch-action: none;
         }
-
-        .htile .half {
-            flex: 1;
-            position: relative;
-        }
-
-        .htile .half:first-child {
-            border-bottom: 1.5px solid rgba(0, 0, 0, 0.35);
-        }
-
-        .htile.playable {
-            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5), 0 0 0 2px var(--gold);
-        }
-
-        .htile.dim {
-            opacity: 0.42;
-            filter: grayscale(0.4);
-        }
-
-        .htile.dragging {
-            opacity: 0;
-        }
-
-        .htile.deal-in {
-            animation: deal-in 0.32s ease-out both;
-        }
-
-        @keyframes deal-in {
-            from { transform: translateY(30px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
+        .htile .half { flex: 1; position: relative; }
+        .htile .half:first-child { border-bottom: 1.5px solid rgba(0,0,0,0.35); }
+        .htile.playable { box-shadow: 0 3px 6px rgba(0,0,0,0.5), 0 0 0 2px var(--gold); }
+        .htile.dim { opacity: 0.42; filter: grayscale(0.4); }
+        .htile.dragging { opacity: 0; }
 
         #ghost {
-            position: fixed;
-            z-index: 200;
-            pointer-events: none;
-            width: 44px;
-            height: 80px;
-            border-radius: 6px;
+            position: fixed; z-index: 200; pointer-events: none;
+            width: 44px; height: 80px; border-radius: 6px;
             background: linear-gradient(160deg, var(--ivory), #ece1c8);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55), 0 0 0 2px var(--gold);
-            display: none;
-            flex-direction: column;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.55), 0 0 0 2px var(--gold);
+            display: none; flex-direction: column;
             will-change: left, top;
         }
+        #ghost .half { flex: 1; position: relative; }
+        #ghost .half:first-child { border-bottom: 1.5px solid rgba(0,0,0,0.35); }
 
-        #ghost .half {
-            flex: 1;
-            position: relative;
-        }
+        #chat-toggle { position: fixed; bottom: calc(90px + var(--safe-bottom)); right: 10px; width: 40px; height: 40px; border-radius: 50%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; }
 
-        #ghost .half:first-child {
-            border-bottom: 1.5px solid rgba(0, 0, 0, 0.35);
-        }
+        #chat-panel { position: fixed; bottom: calc(140px + var(--safe-bottom)); right: 10px; width: 250px; max-height: 300px; background: rgba(15,10,5,0.95); border: 1px solid rgba(217,164,65,0.3); border-radius: 12px; display: none; flex-direction: column; z-index: 50; overflow: hidden; }
+        #chat-panel.show { display: flex; }
+        #chat-messages { flex: 1; overflow-y: auto; padding: 10px; font-size: 12px; }
+        .chat-msg { margin-bottom: 6px; }
+        .chat-msg .author { font-weight: 700; color: var(--gold); }
+        #chat-input-wrap { display: flex; border-top: 1px solid rgba(255,255,255,0.1); }
+        #chat-input-wrap input { flex: 1; padding: 8px 10px; background: transparent; border: none; color: #fff; font-size: 12px; }
+        #chat-input-wrap input:focus { outline: none; }
+        #chat-input-wrap button { padding: 8px 12px; background: var(--gold); border: none; color: #2b1c04; font-weight: 700; font-size: 12px; cursor: pointer; }
 
-        .dropzone {
-            position: absolute;
-            width: 58px;
-            height: 58px;
-            border-radius: 50%;
-            border: 2.5px dashed rgba(217, 164, 65, 0.85);
-            background: rgba(217, 164, 65, 0.14);
-            transform: translate(-50%, -50%) scale(0.6);
-            opacity: 0;
-            pointer-events: none;
-            z-index: 15;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            font-weight: 700;
-            color: var(--gold);
-            transition: opacity 0.18s ease, transform 0.18s ease;
-        }
+        #modalov { position: fixed; inset: 0; background: rgba(4,10,7,0.82); display: none; align-items: center; justify-content: center; z-index: 500; padding: 20px; }
+        #modalov.show { display: flex; }
+        .modal { background: linear-gradient(165deg,#1b3f31,#0e241c); border: 1px solid rgba(217,164,65,0.4); border-radius: 18px; padding: 20px; max-width: 340px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.6); text-align: center; }
+        .modal h2 { margin: 0 0 4px; color: var(--gold); font-size: 19px; }
+        .modal p { font-size: 13px; line-height: 1.5; opacity: 0.9; margin: 6px 0; }
+        .modal .recap { text-align: left; background: rgba(0,0,0,0.25); border-radius: 10px; padding: 9px 12px; margin: 10px 0; font-size: 12.5px; }
+        .modal .recap div { display: flex; justify-content: space-between; padding: 2px 0; }
+        .modal button { margin-top: 10px; border: none; border-radius: 12px; padding: 11px 18px; background: linear-gradient(160deg,#e8bc6a,var(--gold)); color: #2b1c04; font-weight: 800; font-size: 14.5px; width: 100%; box-shadow: 0 4px 12px rgba(217,164,65,0.35); }
+        .modal button:active { transform: scale(0.97); }
 
-        .dropzone.show {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
-        }
-
-        .dropzone.hover {
-            background: rgba(217, 164, 65, 0.35);
-            transform: translate(-50%, -50%) scale(1.15);
-        }
-
-        /* CHAT BUTTON */
-        #chat-toggle {
-            position: fixed;
-            bottom: calc(90px + var(--safe-bottom));
-            right: 10px;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 50;
-        }
-
-        /* CHAT PANEL */
-        #chat-panel {
-            position: fixed;
-            bottom: calc(140px + var(--safe-bottom));
-            right: 10px;
-            width: 250px;
-            max-height: 300px;
-            background: rgba(15, 10, 5, 0.95);
-            border: 1px solid rgba(217, 164, 65, 0.3);
-            border-radius: 12px;
-            display: none;
-            flex-direction: column;
-            z-index: 50;
-            overflow: hidden;
-        }
-
-        #chat-panel.show {
-            display: flex;
-        }
-
-        #chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-            font-size: 12px;
-        }
-
-        .chat-msg {
-            margin-bottom: 6px;
-        }
-
-        .chat-msg .author {
-            font-weight: 700;
-            color: var(--gold);
-        }
-
-        #chat-input-wrap {
-            display: flex;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        #chat-input-wrap input {
-            flex: 1;
-            padding: 8px 10px;
-            background: transparent;
-            border: none;
-            color: #fff;
-            font-size: 12px;
-        }
-
-        #chat-input-wrap input:focus {
-            outline: none;
-        }
-
-        #chat-input-wrap button {
-            padding: 8px 12px;
-            background: var(--gold);
-            border: none;
-            color: #2b1c04;
-            font-weight: 700;
-            font-size: 12px;
-            cursor: pointer;
-        }
-
-        /* MODAL */
-        #modalov {
-            position: fixed;
-            inset: 0;
-            background: rgba(4, 10, 7, 0.82);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 500;
-            padding: 20px;
-        }
-
-        #modalov.show {
-            display: flex;
-        }
-
-        .modal {
-            background: linear-gradient(165deg, #1b3f31, #0e241c);
-            border: 1px solid rgba(217, 164, 65, 0.4);
-            border-radius: 18px;
-            padding: 20px;
-            max-width: 340px;
-            width: 100%;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-            text-align: center;
-        }
-
-        .modal h2 {
-            margin: 0 0 4px;
-            color: var(--gold);
-            font-size: 19px;
-        }
-
-        .modal p {
-            font-size: 13px;
-            line-height: 1.5;
-            opacity: 0.9;
-            margin: 6px 0;
-        }
-
-        .modal .recap {
-            text-align: left;
-            background: rgba(0, 0, 0, 0.25);
-            border-radius: 10px;
-            padding: 9px 12px;
-            margin: 10px 0;
-            font-size: 12.5px;
-        }
-
-        .modal .recap div {
-            display: flex;
-            justify-content: space-between;
-            padding: 2px 0;
-        }
-
-        .modal button {
-            margin-top: 10px;
-            border: none;
-            border-radius: 12px;
-            padding: 11px 18px;
-            background: linear-gradient(160deg, #e8bc6a, var(--gold));
-            color: #2b1c04;
-            font-weight: 800;
-            font-size: 14.5px;
-            width: 100%;
-            box-shadow: 0 4px 12px rgba(217, 164, 65, 0.35);
-        }
-
-        .modal button:active {
-            transform: scale(0.97);
-        }
-
-        /* WAITING OVERLAY */
-        #waiting-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(4, 10, 7, 0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 600;
-            flex-direction: column;
-            padding: 24px;
-            text-align: center;
-        }
-
-        #waiting-overlay h2 {
-            color: var(--gold);
-            margin-bottom: 10px;
-        }
-
-        #waiting-overlay p {
-            opacity: 0.8;
-            margin-bottom: 20px;
-        }
-
-        .spinner {
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top: 3px solid var(--gold);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        #waiting-overlay { position: fixed; inset: 0; background: rgba(4,10,7,0.9); display: flex; align-items: center; justify-content: center; z-index: 600; flex-direction: column; padding: 24px; text-align: center; }
+        #waiting-overlay h2 { color: var(--gold); margin-bottom: 10px; }
+        #waiting-overlay p { opacity: 0.8; margin-bottom: 20px; }
+        .spinner { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid var(--gold); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0%{transform:rotate(0deg);} 100%{transform:rotate(360deg);} }
     </style>
 </head>
 <body>
     <div id="app">
         <div id="topbar">
-            <div class="score-chip teamA" id="chipA">
-                <div class="lbl">Tim A</div>
-                <div class="val" id="scoreA">0</div>
-            </div>
-            <div id="roundlbl">Ronde <b id="roundnum">1</b><br><span style="font-size: 10px; opacity: 0.7;">target 101</span></div>
-            <div class="score-chip teamB" id="chipB">
-                <div class="lbl">Tim B</div>
-                <div class="val" id="scoreB">0</div>
-            </div>
+            <div class="score-chip teamA" id="chipA"><div class="lbl">Tim A</div><div class="val" id="scoreA">0</div></div>
+            <div id="roundlbl">Ronde <b id="roundnum">1</b><br><span style="font-size:10px;opacity:.7;">target 101</span></div>
+            <div class="score-chip teamB" id="chipB"><div class="lbl">Tim B</div><div class="val" id="scoreB">0</div></div>
         </div>
 
-        <div id="toastwrap">
-            <div class="toast" id="toast"></div>
-        </div>
+        <div id="toastwrap"><div class="toast" id="toast"></div></div>
 
         <div id="tablewrap">
             <div id="table">
                 <div class="seat teamB" id="seat-left">
                     <div class="avatar">🧢</div>
-                    <div class="meta">
-                        <div class="name" id="name-left">Bot Kiri</div>
-                        <div class="count" id="cnt-left">7 kartu</div>
-                        <div class="elo" id="elo-left">⭐ 1000</div>
-                    </div>
+                    <div class="meta"><div class="name" id="name-left">Bot Kiri</div><div class="count" id="cnt-left">7 kartu</div></div>
                     <div class="backfan" id="fan-left"></div>
                     <div class="thinkbubble" id="think-left">...</div>
                 </div>
-
                 <div class="seat teamA" id="seat-top">
                     <div class="avatar">👵</div>
-                    <div class="meta">
-                        <div class="name" id="name-top">Bot Atas</div>
-                        <div class="count" id="cnt-top">7 kartu</div>
-                        <div class="elo" id="elo-top">⭐ 1000</div>
-                    </div>
+                    <div class="meta"><div class="name" id="name-top">Bot Atas</div><div class="count" id="cnt-top">7 kartu</div></div>
                     <div class="backfan" id="fan-top"></div>
                     <div class="thinkbubble" id="think-top">...</div>
                 </div>
-
                 <div class="seat teamB" id="seat-right">
                     <div class="avatar">🧔</div>
-                    <div class="meta">
-                        <div class="name" id="name-right">Bot Kanan</div>
-                        <div class="count" id="cnt-right">7 kartu</div>
-                        <div class="elo" id="elo-right">⭐ 1000</div>
-                    </div>
+                    <div class="meta"><div class="name" id="name-right">Bot Kanan</div><div class="count" id="cnt-right">7 kartu</div></div>
                     <div class="backfan" id="fan-right"></div>
                     <div class="thinkbubble" id="think-right">...</div>
                 </div>
-
                 <div id="board"></div>
-                <div class="dropzone" id="dz-left">KIRI</div>
-                <div class="dropzone" id="dz-right">KANAN</div>
             </div>
         </div>
 
         <div id="handzone">
-            <div id="player-info">
-                <span class="name" id="name-human">Kamu</span>
-                <span class="elo" id="elo-human">⭐ 1000</span>
-            </div>
+            <div id="player-info"><span class="name" id="name-human">Kamu</span><span class="elo" id="elo-human">⭐ 1000</span></div>
             <div id="hand"></div>
         </div>
 
         <div id="ghost"></div>
     </div>
 
-    <!-- Chat Toggle -->
     <div id="chat-toggle" onclick="toggleChat()">💬</div>
-
-    <!-- Chat Panel -->
     <div id="chat-panel">
         <div id="chat-messages"></div>
         <div id="chat-input-wrap">
@@ -824,75 +234,39 @@
         </div>
     </div>
 
-    <!-- Modal -->
-    <div id="modalov">
-        <div class="modal" id="modalbox"></div>
-    </div>
-
-    <!-- Waiting Overlay -->
-    <div id="waiting-overlay">
-        <div class="spinner"></div>
-        <h2>Menunggu game dimulai...</h2>
-        <p>Host akan memulai game segera</p>
-    </div>
+    <div id="modalov"><div class="modal" id="modalbox"></div></div>
+    <div id="waiting-overlay"><div class="spinner"></div><h2>Menunggu game dimulai...</h2><p>Host akan memulai game segera</p></div>
 
     <script>
-        // Constants
         const PIP_POS = {
-            0: [],
-            1: [[1, 1]],
-            2: [[0, 0], [2, 2]],
-            3: [[0, 0], [1, 1], [2, 2]],
-            4: [[0, 0], [0, 2], [2, 0], [2, 2]],
-            5: [[0, 0], [0, 2], [1, 1], [2, 0], [2, 2]],
-            6: [[0, 0], [0, 2], [1, 0], [1, 2], [2, 0], [2, 2]]
+            0: [], 1: [[1,1]], 2: [[0,0],[2,2]], 3: [[0,0],[1,1],[2,2]],
+            4: [[0,0],[0,2],[2,0],[2,2]], 5: [[0,0],[0,2],[1,1],[2,0],[2,2]],
+            6: [[0,0],[0,2],[1,0],[1,2],[2,0],[2,2]]
         };
+        const TILE_LEN = 54, TILE_THICK = 26, GAP = 3;
 
-        const TILE_LEN = 54;
-        const TILE_THICK = 26;
-        const GAP = 3;
+        let socket = null, currentUser = null, mySeat = null;
+        let gameState = null, players = [], roomCode = null;
 
-        // State
-        let socket = null;
-        let currentUser = null;
-        let mySeat = null;
-        let gameState = null;
-        let players = [];
-        let roomCode = null;
-
-        // Initialize
         (function init() {
             const token = localStorage.getItem('gaple_token');
             const user = localStorage.getItem('gaple_user');
             const gameData = localStorage.getItem('gaple_game_data');
 
-            if (!token || !user) {
-                window.location.href = '/login.html';
-                return;
-            }
-
+            if (!token || !user) { window.location.href = '/login.html'; return; }
             currentUser = JSON.parse(user);
 
-            // Connect socket
-            socket = io({
-                auth: { token }
-            });
-
+            socket = io({ auth: { token } });
             setupSocketListeners();
 
-            // If we have game data from lobby, use it
             if (gameData) {
                 const data = JSON.parse(gameData);
                 roomCode = data.roomCode;
                 initializeGame(data);
                 localStorage.removeItem('gaple_game_data');
-                
-                // Join room on this new socket
                 if (roomCode) {
-                    socket.emit('join-room', { roomCode }, (response) => {
-                        if (!response.success) {
-                            console.log('Rejoin room note:', response.error);
-                        }
+                    socket.emit('join-room', { roomCode }, (res) => {
+                        if (!res.success) console.log('Rejoin note:', res.error);
                     });
                 }
             }
@@ -900,6 +274,7 @@
 
         function setupSocketListeners() {
             socket.on('game-start', (data) => {
+                roomCode = data.roomCode;
                 initializeGame(data);
             });
 
@@ -908,7 +283,7 @@
             });
 
             socket.on('player-pass', (data) => {
-                handlePlayerPass(data);
+                showToast(`${data.player} tidak bisa jalan`);
             });
 
             socket.on('turn-start', (data) => {
@@ -930,18 +305,9 @@
 
         function initializeGame(data) {
             document.getElementById('waiting-overlay').style.display = 'none';
-
             mySeat = data.mySeat;
             players = data.players;
 
-            // Update player names
-            players.forEach(p => {
-                if (p.seat === 0 && p.seat !== mySeat) {
-                    // This is the human player's seat
-                }
-            });
-
-            // Initialize game state
             gameState = {
                 hand: data.hand,
                 chain: [],
@@ -952,32 +318,22 @@
                 turn: data.turn
             };
 
-            // Update UI
             updatePlayerNames();
             renderHand();
+            renderBoard();
             updateTurnIndicator();
-
             showToast('Game dimulai!');
         }
 
         function updatePlayerNames() {
-            // Map seats to display positions
-            // Seat 0 = bottom (human), 1 = right, 2 = top, 3 = left
-            // But we need to adjust based on mySeat
-
-            const seatMap = {
-                0: 'human',
-                1: 'right',
-                2: 'top',
-                3: 'left'
-            };
-
             players.forEach(p => {
-                const pos = seatMap[(p.seat - mySeat + 4) % 4];
-                if (pos && pos !== 'human') {
-                    document.getElementById(`name-${pos}`).textContent = p.username;
-                } else if (pos === 'human') {
+                const relSeat = (p.seat - mySeat + 4) % 4;
+                const pos = { 0: 'human', 1: 'right', 2: 'top', 3: 'left' }[relSeat];
+                if (pos === 'human') {
                     document.getElementById('name-human').textContent = p.username;
+                } else if (pos) {
+                    document.getElementById(`name-${pos}`).textContent = p.username;
+                    document.getElementById(`cnt-${pos}`).textContent = `${p.cardCount} kartu`;
                 }
             });
         }
@@ -988,15 +344,16 @@
 
             const isMyTurn = gameState.turn === mySeat;
             const legalMoves = isMyTurn ? getLegalMoves() : [];
+            const playableIdx = new Set(legalMoves.map(m => m.idx));
 
             gameState.hand.forEach((tile, idx) => {
                 const d = document.createElement('div');
-                d.className = 'htile' + (isMyTurn ? ' playable' : ' dim');
+                d.className = 'htile' + (isMyTurn ? (gameState.boardEmpty || playableIdx.has(idx) ? ' playable' : ' dim') : ' dim');
                 d.dataset.idx = idx;
                 d.appendChild(createHalf(tile.a));
                 d.appendChild(createHalf(tile.b));
 
-                if (isMyTurn && (gameState.boardEmpty || legalMoves.some(m => m.idx === idx))) {
+                if (isMyTurn && (gameState.boardEmpty || playableIdx.has(idx))) {
                     d.addEventListener('pointerdown', onDragStart);
                 }
 
@@ -1009,9 +366,7 @@
             half.className = 'half';
             const grid = document.createElement('div');
             grid.className = 'pipgrid';
-
-            const positions = PIP_POS[val] || [];
-            positions.forEach(([r, c]) => {
+            (PIP_POS[val] || []).forEach(([r, c]) => {
                 const p = document.createElement('div');
                 p.className = 'pip ' + ((val === 1 || val === 4) ? 'red' : 'blk');
                 p.style.gridRow = (r + 1);
@@ -1020,7 +375,6 @@
                 p.style.height = '54%';
                 grid.appendChild(p);
             });
-
             half.appendChild(grid);
             return half;
         }
@@ -1028,29 +382,20 @@
         function getLegalMoves() {
             const hand = gameState.hand;
             const moves = [];
-
             if (gameState.boardEmpty) {
-                hand.forEach((tile, idx) => {
-                    moves.push({ idx, tile, side: 'any' });
-                });
+                hand.forEach((tile, idx) => moves.push({ idx, tile, side: 'any' }));
                 return moves;
             }
-
             hand.forEach((tile, idx) => {
-                const matchesLeft = tile.a === gameState.leftEnd || tile.b === gameState.leftEnd;
-                const matchesRight = tile.a === gameState.rightEnd || tile.b === gameState.rightEnd;
-
-                if (matchesLeft) moves.push({ idx, tile, side: 'left' });
-                if (matchesRight) moves.push({ idx, tile, side: 'right' });
+                if (tile.a === gameState.leftEnd || tile.b === gameState.leftEnd) moves.push({ idx, tile, side: 'left' });
+                if (tile.a === gameState.rightEnd || tile.b === gameState.rightEnd) moves.push({ idx, tile, side: 'right' });
             });
-
             return moves;
         }
 
         function handleTilePlayed(data) {
             const { player, seat, tile, side, isBot } = data;
 
-            // Add tile to chain
             if (gameState.boardEmpty) {
                 gameState.chain = [{ a: tile.a, b: tile.b, isDouble: tile.a === tile.b, playedBy: seat }];
                 gameState.leftEnd = tile.a;
@@ -1058,75 +403,51 @@
                 gameState.boardEmpty = false;
             } else if (side === 'right') {
                 let leftPip, rightPip;
-                if (tile.a === gameState.rightEnd) {
-                    leftPip = tile.a;
-                    rightPip = tile.b;
-                } else {
-                    leftPip = tile.b;
-                    rightPip = tile.a;
-                }
+                if (tile.a === gameState.rightEnd) { leftPip = tile.a; rightPip = tile.b; }
+                else { leftPip = tile.b; rightPip = tile.a; }
                 gameState.chain.push({ a: leftPip, b: rightPip, isDouble: tile.a === tile.b, playedBy: seat });
                 gameState.rightEnd = rightPip;
             } else if (side === 'left') {
                 let leftPip, rightPip;
-                if (tile.a === gameState.leftEnd) {
-                    rightPip = tile.a;
-                    leftPip = tile.b;
-                } else {
-                    rightPip = tile.b;
-                    leftPip = tile.a;
-                }
+                if (tile.a === gameState.leftEnd) { rightPip = tile.a; leftPip = tile.b; }
+                else { rightPip = tile.b; leftPip = tile.a; }
                 gameState.chain.unshift({ a: leftPip, b: rightPip, isDouble: tile.a === tile.b, playedBy: seat });
                 gameState.leftEnd = leftPip;
             }
 
-            // Remove from hand if it's our tile
             if (seat === mySeat) {
                 const idx = gameState.hand.findIndex(t => t.a === tile.a && t.b === tile.b);
-                if (idx !== -1) {
-                    gameState.hand.splice(idx, 1);
-                }
+                if (idx !== -1) gameState.hand.splice(idx, 1);
             }
 
-            // Render
             renderBoard();
             renderHand();
             showToast(`${player} memainkan ${tile.a}-${tile.b}`);
-        }
-
-        function handlePlayerPass(data) {
-            showToast(`${data.player} tidak bisa jalan`);
         }
 
         function handleTurnStart(data) {
             gameState.turn = data.turn;
             updateTurnIndicator();
             renderHand();
-
-            if (data.turn === mySeat) {
-                showToast('Giliranmu!');
-            }
+            if (data.turn === mySeat) showToast('Giliranmu!');
         }
 
         function updateHandCounts(hands) {
             hands.forEach(h => {
-                const pos = getSeatPosition(h.seat);
+                const relSeat = (h.seat - mySeat + 4) % 4;
+                const pos = { 0: 'human', 1: 'right', 2: 'top', 3: 'left' }[relSeat];
                 if (pos && pos !== 'human') {
                     document.getElementById(`cnt-${pos}`).textContent = `${h.cardCount} kartu`;
                 }
             });
         }
 
-        function getSeatPosition(seat) {
-            const relativeSeat = (seat - mySeat + 4) % 4;
-            return { 0: 'human', 1: 'right', 2: 'top', 3: 'left' }[relativeSeat];
-        }
-
         function updateTurnIndicator() {
             document.querySelectorAll('.seat').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.score-chip').forEach(c => c.classList.remove('turn-glow'));
 
-            const pos = getSeatPosition(gameState.turn);
+            const relSeat = (gameState.turn - mySeat + 4) % 4;
+            const pos = { 0: 'human', 1: 'right', 2: 'top', 3: 'left' }[relSeat];
             if (pos && pos !== 'human') {
                 document.getElementById(`seat-${pos}`).classList.add('active');
             }
@@ -1139,17 +460,28 @@
             const boardEl = document.getElementById('board');
             boardEl.innerHTML = '';
 
-            // Simple rendering for now
-            const cx = boardEl.clientWidth / 2;
-            const cy = boardEl.clientHeight / 2;
+            if (gameState.chain.length === 0) return;
+
+            const W = boardEl.clientWidth || 400;
+            const H = boardEl.clientHeight || 300;
+            const cx = W / 2;
+            const cy = H / 2;
+
+            const tileW = 54;
+            const tileH = 26;
+            const gap = 4;
+
+            // Simple horizontal layout
+            const totalWidth = gameState.chain.length * (tileW + gap) - gap;
+            let startX = cx - totalWidth / 2;
 
             gameState.chain.forEach((tile, i) => {
                 const el = document.createElement('div');
-                el.className = 'btile horiz';
-                el.style.left = (cx - (gameState.chain.length * 30) + i * 60) + 'px';
-                el.style.top = (cy - 15) + 'px';
-                el.style.width = '54px';
-                el.style.height = '26px';
+                el.className = 'btile horiz enter';
+                el.style.left = (startX + i * (tileW + gap)) + 'px';
+                el.style.top = (cy - tileH / 2) + 'px';
+                el.style.width = tileW + 'px';
+                el.style.height = tileH + 'px';
 
                 el.appendChild(createHalf(tile.a));
                 el.appendChild(createHalf(tile.b));
@@ -1159,11 +491,9 @@
         }
 
         function handleGameOver(data) {
-            const { winnerTeam, scores, reason, eloChanges, players: playerList } = data;
-
+            const { winnerTeam, scores, reason, eloChanges } = data;
             const modal = document.getElementById('modalbox');
             const isWinner = winnerTeam === (mySeat % 2);
-
             const eloChange = eloChanges[mySeat] || 0;
             const eloSign = eloChange >= 0 ? '+' + eloChange : '' + eloChange;
 
@@ -1173,17 +503,14 @@
                 <div class="recap">
                     <div><span>Tim A</span><b>${scores[0]}</b></div>
                     <div><span>Tim B</span><b>${scores[1]}</b></div>
-                    <div><span>Rating</span><b style="color: ${eloChange >= 0 ? '#4caf50' : '#ef5350'}">${eloSign}</b></div>
+                    <div><span>Rating</span><b style="color:${eloChange >= 0 ? '#4caf50' : '#ef5350'}">${eloSign}</b></div>
                 </div>
                 <button onclick="backToLobby()">Kembali ke Lobby</button>
             `;
-
             document.getElementById('modalov').classList.add('show');
         }
 
-        function backToLobby() {
-            window.location.href = '/lobby.html';
-        }
+        function backToLobby() { window.location.href = '/lobby.html'; }
 
         // Drag & Drop
         let dragState = null;
@@ -1195,12 +522,9 @@
             const idx = parseInt(e.currentTarget.dataset.idx);
             const tile = gameState.hand[idx];
             const moves = getLegalMoves().filter(m => m.idx === idx);
-
             if (moves.length === 0) return;
 
-            if (e.pointerId !== undefined) {
-                e.currentTarget.setPointerCapture(e.pointerId);
-            }
+            if (e.pointerId !== undefined) e.currentTarget.setPointerCapture(e.pointerId);
 
             const ghost = document.getElementById('ghost');
             ghost.innerHTML = '';
@@ -1231,29 +555,18 @@
             window.removeEventListener('pointermove', onDragMove);
             window.removeEventListener('pointerup', onDragEnd);
 
-            const ghost = document.getElementById('ghost');
-            ghost.style.display = 'none';
-
-            if (dragState) {
-                dragState.srcEl.classList.remove('dragging');
-            }
-
+            document.getElementById('ghost').style.display = 'none';
+            if (dragState) dragState.srcEl.classList.remove('dragging');
             if (!dragState) return;
 
-            const { idx, tile, moves } = dragState;
+            const { idx, moves } = dragState;
 
-            // Determine side
             let side = 'any';
             if (!gameState.boardEmpty) {
-                // Simple: if tile matches left end, play left, else right
-                if (moves.some(m => m.side === 'left')) {
-                    side = 'left';
-                } else if (moves.some(m => m.side === 'right')) {
-                    side = 'right';
-                }
+                if (moves.some(m => m.side === 'left')) side = 'left';
+                else if (moves.some(m => m.side === 'right')) side = 'right';
             }
 
-            // Send to server
             socket.emit('play-tile', { tileIdx: idx, side }, (response) => {
                 if (!response.success) {
                     showToast(response.error || 'Gagal main kartu');
@@ -1265,24 +578,14 @@
         }
 
         // Chat
-        function toggleChat() {
-            document.getElementById('chat-panel').classList.toggle('show');
-        }
+        function toggleChat() { document.getElementById('chat-panel').classList.toggle('show'); }
 
         function sendChat() {
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
-
             if (!text) return;
-
             socket.emit('chat-message', text);
             input.value = '';
-            
-            // Also show locally immediately
-            appendChatMessage({
-                username: currentUser.username,
-                text: text
-            });
         }
 
         function appendChatMessage(msg) {
@@ -1300,7 +603,6 @@
 
         // Toast
         let toastTimer = null;
-
         function showToast(msg) {
             const t = document.getElementById('toast');
             t.textContent = msg;

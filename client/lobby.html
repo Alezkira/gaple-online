@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>Gaple Online - Lobby</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f3d2e 0%, #0a2b20 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(217, 164, 65, 0.2);
+        }
+
+        .header h1 {
+            font-size: 20px;
+            color: #d9a441;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-info .username {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .user-info .elo {
+            font-size: 12px;
+            background: rgba(217, 164, 65, 0.2);
+            padding: 4px 8px;
+            border-radius: 6px;
+            color: #d9a441;
+        }
+
+        .btn-logout {
+            background: rgba(192, 69, 58, 0.3);
+            border: 1px solid rgba(192, 69, 58, 0.5);
+            color: #ef9a9a;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #d9a441;
+        }
+
+        .card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 14px 20px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-align: center;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary {
+            background: linear-gradient(160deg, #e8bc6a, #d9a441);
+            color: #2b1c04;
+            box-shadow: 0 4px 15px rgba(217, 164, 65, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .join-form {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .join-form input {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+        }
+
+        .join-form input:focus {
+            outline: none;
+            border-color: #d9a441;
+        }
+
+        .join-form input::placeholder {
+            text-transform: none;
+            letter-spacing: normal;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            text-align: center;
+        }
+
+        .stat-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            border-radius: 10px;
+        }
+
+        .stat-item .value {
+            font-size: 24px;
+            font-weight: 800;
+            color: #d9a441;
+        }
+
+        .stat-item .label {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+
+        /* Room Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(4, 10, 7, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 20px;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: linear-gradient(165deg, #1b3f31, #0e241c);
+            border: 1px solid rgba(217, 164, 65, 0.4);
+            border-radius: 20px;
+            padding: 25px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal h2 {
+            color: #d9a441;
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .room-code {
+            text-align: center;
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: 6px;
+            color: #d9a441;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .player-list {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+
+        .player-list li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+
+        .player-list .player-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .player-list .seat {
+            background: rgba(217, 164, 65, 0.3);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .player-list .name {
+            font-weight: 600;
+        }
+
+        .player-list .bot-badge {
+            font-size: 10px;
+            background: rgba(63, 143, 138, 0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #3f8f8a;
+        }
+
+        .player-list .ready-badge {
+            font-size: 10px;
+            background: rgba(76, 175, 80, 0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #4caf50;
+        }
+
+        .player-list .not-ready-badge {
+            font-size: 10px;
+            background: rgba(192, 69, 58, 0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #ef5350;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-buttons .btn {
+            flex: 1;
+        }
+
+        .btn-start {
+            background: linear-gradient(160deg, #4caf50, #388e3c);
+            color: #fff;
+        }
+
+        .btn-ready {
+            background: linear-gradient(160deg, #2196f3, #1976d2);
+            color: #fff;
+        }
+
+        .btn-leave {
+            background: rgba(192, 69, 58, 0.3);
+            color: #ef9a9a;
+            border: 1px solid rgba(192, 69, 58, 0.5);
+        }
+
+        /* Chat */
+        .chat-container {
+            margin-top: 20px;
+        }
+
+        .chat-messages {
+            height: 200px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .chat-message {
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .chat-message .author {
+            font-weight: 700;
+            color: #d9a441;
+        }
+
+        .chat-message .text {
+            opacity: 0.9;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .chat-input input:focus {
+            outline: none;
+            border-color: #d9a441;
+        }
+
+        .chat-input button {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            background: #d9a441;
+            color: #2b1c04;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 10, 5, 0.95);
+            border: 1px solid rgba(217, 164, 65, 0.5);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 200;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        /* Leaderboard */
+        .leaderboard {
+            margin-top: 20px;
+        }
+
+        .leaderboard table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .leaderboard th,
+        .leaderboard td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .leaderboard th {
+            font-size: 12px;
+            opacity: 0.7;
+            text-transform: uppercase;
+        }
+
+        .leaderboard tr:first-child td {
+            border-top: none;
+        }
+
+        .leaderboard .rank {
+            font-weight: 700;
+            color: #d9a441;
+        }
+
+        .leaderboard .elo {
+            font-weight: 700;
+        }
+
+        @media (max-width: 600px) {
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🁘 Gaple Online</h1>
+        <div class="user-info">
+            <span class="username" id="display-username">Player</span>
+            <span class="elo" id="display-elo">⭐ 1000</span>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Stats -->
+        <div class="section">
+            <div class="section-title">Statistik Saya</div>
+            <div class="card">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="value" id="stat-elo">1000</div>
+                        <div class="label">Rating ELO</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="value" id="stat-games">0</div>
+                        <div class="label">Main</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="value" id="stat-wins">0</div>
+                        <div class="label">Menang</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="value" id="stat-losses">0</div>
+                        <div class="label">Kalah</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="section">
+            <div class="section-title">Mulai Bermain</div>
+            <div class="card">
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="createRoom()">Buat Room Baru</button>
+                    <button class="btn btn-secondary" onclick="showJoinModal()">Gabung Room</button>
+                </div>
+                <div class="join-form" id="join-form" style="display: none;">
+                    <input type="text" id="room-code-input" placeholder="KODE ROOM" maxlength="6">
+                    <button class="btn btn-primary" onclick="joinRoom()">Gabung</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard -->
+        <div class="section leaderboard">
+            <div class="section-title">Leaderboard</div>
+            <div class="card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Pemain</th>
+                            <th>ELO</th>
+                            <th>W/L</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-body">
+                        <tr>
+                            <td colspan="4" style="text-align: center; opacity: 0.5;">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Modal -->
+    <div class="modal-overlay" id="room-modal">
+        <div class="modal">
+            <h2>Room</h2>
+            <div class="room-code" id="modal-room-code">------</div>
+
+            <div class="section-title">Pemain (<span id="player-count">0</span>/4)</div>
+            <ul class="player-list" id="player-list"></ul>
+
+            <div class="chat-container">
+                <div class="section-title">Chat</div>
+                <div class="chat-messages" id="chat-messages"></div>
+                <div class="chat-input">
+                    <input type="text" id="chat-input" placeholder="Ketik pesan..." maxlength="200">
+                    <button onclick="sendChat()">Kirim</button>
+                </div>
+            </div>
+
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button class="btn btn-ready" id="btn-ready" onclick="toggleReady()">Ready</button>
+                <button class="btn btn-start" id="btn-start" onclick="startGame()" style="display: none;">Mulai Game</button>
+                <button class="btn btn-leave" onclick="leaveRoom()">Keluar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // State
+        let socket = null;
+        let currentUser = null;
+        let currentRoom = null;
+
+        // Initialize
+        (function init() {
+            // Check auth
+            const token = localStorage.getItem('gaple_token');
+            const user = localStorage.getItem('gaple_user');
+
+            if (!token || !user) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            currentUser = JSON.parse(user);
+
+            // Update UI
+            document.getElementById('display-username').textContent = currentUser.username;
+            document.getElementById('display-elo').textContent = `⭐ ${currentUser.elo_rating}`;
+            document.getElementById('stat-elo').textContent = currentUser.elo_rating;
+            document.getElementById('stat-games').textContent = currentUser.games_played || 0;
+            document.getElementById('stat-wins').textContent = currentUser.wins || 0;
+            document.getElementById('stat-losses').textContent = currentUser.losses || 0;
+
+            // Connect socket
+            socket = io({
+                auth: { token }
+            });
+
+            setupSocketListeners();
+            loadLeaderboard();
+        })();
+
+        function setupSocketListeners() {
+            socket.on('connect', () => {
+                console.log('Connected to server');
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Disconnected');
+                showToast('Koneksi terputus');
+            });
+
+            socket.on('room-update', (room) => {
+                currentRoom = room;
+                updateRoomModal();
+            });
+
+            socket.on('chat-message', (msg) => {
+                appendChatMessage(msg);
+            });
+
+            socket.on('game-start', (data) => {
+                // Redirect ke game page
+                localStorage.setItem('gaple_game_data', JSON.stringify(data));
+                window.location.href = '/game.html';
+            });
+
+            socket.on('player-disconnected', (data) => {
+                showToast(`${data.username} keluar dari room`);
+            });
+        }
+
+        async function loadLeaderboard() {
+            try {
+                const response = await fetch('/api/leaderboard');
+                const players = await response.json();
+
+                const tbody = document.getElementById('leaderboard-body');
+                tbody.innerHTML = '';
+
+                if (players.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; opacity: 0.5;">Belum ada data</td></tr>';
+                    return;
+                }
+
+                players.forEach((player, index) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="rank">${index + 1}</td>
+                        <td>${player.username}</td>
+                        <td class="elo">⭐ ${player.elo_rating}</td>
+                        <td>${player.wins}/${player.losses}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error('Load leaderboard error:', err);
+            }
+        }
+
+        function createRoom() {
+            socket.emit('create-room', (response) => {
+                if (response.success) {
+                    currentRoom = response.room;
+                    document.getElementById('modal-room-code').textContent = response.room.code;
+                    showRoomModal();
+                    showToast('Room dibuat! Kode: ' + response.room.code);
+                } else {
+                    showToast(response.error || 'Gagal membuat room');
+                }
+            });
+        }
+
+        function showJoinModal() {
+            const joinForm = document.getElementById('join-form');
+            joinForm.style.display = joinForm.style.display === 'none' ? 'flex' : 'none';
+            document.getElementById('room-code-input').focus();
+        }
+
+        function joinRoom() {
+            const code = document.getElementById('room-code-input').value.trim().toUpperCase();
+
+            if (!code || code.length !== 6) {
+                showToast('Masukkan kode room 6 karakter');
+                return;
+            }
+
+            socket.emit('join-room', { roomCode: code }, (response) => {
+                if (response.success) {
+                    currentRoom = response.room;
+                    document.getElementById('modal-room-code').textContent = response.room.code;
+                    showRoomModal();
+                    showToast('Berhasil join room!');
+                } else {
+                    showToast(response.error || 'Gagal join room');
+                }
+            });
+        }
+
+        function showRoomModal() {
+            document.getElementById('room-modal').classList.add('show');
+            updateRoomModal();
+        }
+
+        function hideRoomModal() {
+            document.getElementById('room-modal').classList.remove('show');
+        }
+
+        function updateRoomModal() {
+            if (!currentRoom) return;
+
+            // Update player count
+            document.getElementById('player-count').textContent = currentRoom.players.length;
+
+            // Update player list
+            const list = document.getElementById('player-list');
+            list.innerHTML = '';
+
+            currentRoom.players.forEach(player => {
+                const li = document.createElement('li');
+                const isHost = player.id === currentRoom.hostId;
+                const isMe = player.id === currentUser.id;
+
+                li.innerHTML = `
+                    <div class="player-info">
+                        <div class="seat">${player.seat + 1}</div>
+                        <div class="name">
+                            ${player.username}
+                            ${isHost ? ' 👑' : ''}
+                        </div>
+                    </div>
+                    <div>
+                        ${player.isBot ? '<span class="bot-badge">BOT</span>' : ''}
+                        ${!player.isBot ? (player.isReady ? '<span class="ready-badge">READY</span>' : '<span class="not-ready-badge">BELUM</span>') : ''}
+                    </div>
+                `;
+                list.appendChild(li);
+            });
+
+            // Show/hide start button (only for host)
+            const isHost = currentRoom.hostId === currentUser.id;
+            document.getElementById('btn-start').style.display = isHost ? 'block' : 'none';
+
+            // Update ready button text
+            const myPlayer = currentRoom.players.find(p => p.id === currentUser.id);
+            if (myPlayer) {
+                document.getElementById('btn-ready').textContent = myPlayer.isReady ? 'Unready' : 'Ready';
+            }
+        }
+
+        function toggleReady() {
+            socket.emit('toggle-ready', (response) => {
+                if (!response.success) {
+                    showToast(response.error || 'Gagal update ready');
+                }
+            });
+        }
+
+        function startGame() {
+            socket.emit('start-game', (response) => {
+                if (!response.success) {
+                    showToast(response.error || 'Gagal mulai game');
+                }
+            });
+        }
+
+        function leaveRoom() {
+            socket.emit('leave-room', (response) => {
+                if (response.success) {
+                    currentRoom = null;
+                    hideRoomModal();
+                    showToast('Keluar dari room');
+                }
+            });
+        }
+
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+
+            if (!text) return;
+
+            socket.emit('chat-message', text);
+            input.value = '';
+        }
+
+        function appendChatMessage(msg) {
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = 'chat-message';
+            div.innerHTML = `<span class="author">${msg.username}:</span> <span class="text">${msg.text}</span>`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Chat enter key
+        document.getElementById('chat-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendChat();
+            }
+        });
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function logout() {
+            localStorage.removeItem('gaple_token');
+            localStorage.removeItem('gaple_user');
+            window.location.href = '/login.html';
+        }
+    </script>
+</body>
+</html>

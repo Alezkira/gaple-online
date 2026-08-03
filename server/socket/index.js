@@ -177,22 +177,26 @@ module.exports = function(io, db) {
                                     cardCount: room.game.hands[p.seat].length
                                 })),
                                 turn: room.game.turn,
-                                mySeat: index
+                                mySeat: index,
+                                roomCode: socket.roomCode
                             });
                         }
                     }
                 });
 
-                // Broadcast turn start
-                io.to(socket.roomCode).emit('turn-start', {
-                    turn: room.game.turn,
-                    player: room.players[room.game.turn].username
-                });
+                // Delay turn-start to give players time to join room on new socket
+                setTimeout(() => {
+                    // Broadcast turn start
+                    io.to(socket.roomCode).emit('turn-start', {
+                        turn: room.game.turn,
+                        player: room.players[room.game.turn].username
+                    });
 
-                // Jika giliran bot, jalankan
-                if (room.players[room.game.turn].isBot) {
-                    setTimeout(() => handleBotTurn(room, io, db), 1000);
-                }
+                    // Jika giliran bot, jalankan
+                    if (room.players[room.game.turn].isBot) {
+                        setTimeout(() => handleBotTurn(room, io, db), 1000);
+                    }
+                }, 2000);
 
                 callback({ success: true });
             } catch (err) {

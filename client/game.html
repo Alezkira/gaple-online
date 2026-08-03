@@ -858,6 +858,7 @@
         let mySeat = null;
         let gameState = null;
         let players = [];
+        let roomCode = null;
 
         // Initialize
         (function init() {
@@ -882,8 +883,18 @@
             // If we have game data from lobby, use it
             if (gameData) {
                 const data = JSON.parse(gameData);
+                roomCode = data.roomCode;
                 initializeGame(data);
                 localStorage.removeItem('gaple_game_data');
+                
+                // Join room on this new socket
+                if (roomCode) {
+                    socket.emit('join-room', { roomCode }, (response) => {
+                        if (!response.success) {
+                            console.log('Rejoin room note:', response.error);
+                        }
+                    });
+                }
             }
         })();
 
@@ -1266,6 +1277,12 @@
 
             socket.emit('chat-message', text);
             input.value = '';
+            
+            // Also show locally immediately
+            appendChatMessage({
+                username: currentUser.username,
+                text: text
+            });
         }
 
         function appendChatMessage(msg) {

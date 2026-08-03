@@ -147,9 +147,7 @@ let scores=[0,0],turn=-1,gameReady=false,busy=false;
 })();
 
 function onGameStart(data){
-  roomCode=data.roomCode;players=data.players;
-  if(data.hands){const uid=JSON.parse(localStorage.getItem('gaple_user')).id;const me=players.find(p=>p.id===uid||String(p.id)===String(uid));mySeat=me?me.seat:data.mySeat;myHand=data.hands[mySeat]||[];}
-  else{mySeat=data.mySeat;myHand=data.hand;}
+  roomCode=data.roomCode;players=data.players;mySeat=data.mySeat;myHand=data.hand||[];
   chain=[];centerIdx=0;leftEnd=null;rightEnd=null;boardEmpty=true;lastPlayedIndex=0;
   scores=[0,0];turn=data.turn;gameReady=true;busy=false;
   updatePlayerNamesAndFans();updateScoreUI();renderAll(true);showToast('Game dimulai!');

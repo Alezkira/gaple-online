@@ -190,32 +190,44 @@ module.exports = function(io, db) {
                 // Update database
                 db.prepare('UPDATE rooms SET status = ? WHERE id = ?').run('playing', socket.roomCode);
 
-                // Broadcast game-start to ALL in room
-                io.to(socket.roomCode).emit('game-start', {
-                    hands: room.game.hands,
-                    players: room.players.map(p => ({
-                        id: p.id,
-                        username: p.username,
-                        seat: p.seat,
-                        isBot: p.isBot,
-                        cardCount: room.game.hands[p.seat].length
-                    })),
-                    turn: room.game.turn,
-                    roomCode: socket.roomCode
-                });
+                // Send game-start to each player in the room individually (so each gets their seat)
+                const roomSockets = io.sockets.adapter.rooms.get(socket.roomCode);
+                if (roomSockets) {
+                    roomSockets.forEach(socketId => {
+                        const sock = io.sockets.sockets.get(socketId);
+                        if (sock && sock.userId) {
+                            const player = room.players.find(p => p.id === sock.userId);
+                            if (player) {
+                                sock.emit('game-start', {
+                                    hand: room.game.hands[player.seat],
+                                    players: room.players.map(p => ({
+                                        id: p.id,
+                                        username: p.username,
+                                        seat: p.seat,
+                                        isBot: p.isBot,
+                                        cardCount: room.game.hands[p.seat].length
+                                    })),
+                                    turn: room.game.turn,
+                                    mySeat: player.seat,
+                                    roomCode: socket.roomCode
+                                });
+                            }
+                        }
+                    });
+                }
 
-                // Send turn-start immediately
-                io.to(socket.roomCode).emit('turn-start', {
-                    turn: room.game.turn,
-                    player: room.players[room.game.turn].username
-                });
-
-                // Update card counts
+                // Also update card counts
                 io.to(socket.roomCode).emit('update-hands', {
                     hands: room.players.map((p, i) => ({
                         seat: i,
                         cardCount: room.game.hands[i].length
                     }))
+                });
+
+                // Broadcast turn start
+                io.to(socket.roomCode).emit('turn-start', {
+                    turn: room.game.turn,
+                    player: room.players[room.game.turn].username
                 });
 
                 // Jika giliran bot, jalankan

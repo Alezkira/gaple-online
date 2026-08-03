@@ -48,22 +48,18 @@ module.exports = function(io, db) {
                     return callback({ success: false, error: 'Room tidak ditemukan' });
                 }
 
-                if (room.status !== 'waiting') {
-                    return callback({ success: false, error: 'Game sudah dimulai' });
-                }
-
-                // Cek sudah join - jika sudah, update socketId saja
+                // Allow rejoin even if game is playing (for socket reconnect)
                 const existingPlayer = room.players.find(p => p.id === socket.userId);
                 if (existingPlayer) {
-                    // Update socketId
                     existingPlayer.socketId = socket.id;
                     socket.join(roomCode);
                     socket.roomCode = roomCode;
-                    
-                    // Broadcast update
                     io.to(roomCode).emit('room-update', room.getPublicInfo());
-                    
                     return callback({ success: true, room: room.getPublicInfo(), seat: existingPlayer.seat });
+                }
+
+                if (room.status !== 'waiting') {
+                    return callback({ success: false, error: 'Game sudah dimulai' });
                 }
 
                 if (room.players.length >= 4) {
@@ -71,16 +67,10 @@ module.exports = function(io, db) {
                 }
 
                 const seat = room.addPlayer(socket.userId, socket.username, socket.id);
-
-                // Insert ke database
                 db.prepare('INSERT INTO room_players (room_id, player_id, seat_index, is_bot) VALUES (?, ?, ?, 0)').run(roomCode, socket.userId, seat);
-
                 socket.join(roomCode);
                 socket.roomCode = roomCode;
-
-                // Broadcast update
                 io.to(roomCode).emit('room-update', room.getPublicInfo());
-
                 callback({ success: true, room: room.getPublicInfo(), seat });
             } catch (err) {
                 console.error('Join room error:', err);

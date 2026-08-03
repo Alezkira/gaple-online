@@ -748,12 +748,22 @@
 
             if (!text) return;
 
-            socket.emit('chat-message', text);
+            if (!socket || !socket.connected) {
+                showToast('Koneksi terputus, tidak bisa kirim chat');
+                return;
+            }
+
+            socket.emit('chat-message', text, (ack) => {
+                if (!ack || !ack.success) {
+                    showToast('Gagal kirim chat: ' + (ack?.error || 'koneksi'));
+                }
+            });
             input.value = '';
         }
 
         function appendChatMessage(msg) {
             const container = document.getElementById('chat-messages');
+            if (!container) return;
             const div = document.createElement('div');
             div.className = 'chat-message';
             div.innerHTML = `<span class="author">${msg.username}:</span> <span class="text">${msg.text}</span>`;

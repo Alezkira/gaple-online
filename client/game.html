@@ -396,6 +396,8 @@
         function handleTilePlayed(data) {
             const { player, seat, tile, side, isBot } = data;
 
+            gameState._newTilePlayed = true;
+
             if (gameState.boardEmpty) {
                 gameState.chain = [{ a: tile.a, b: tile.b, isDouble: tile.a === tile.b, playedBy: seat }];
                 gameState.leftEnd = tile.a;
@@ -458,12 +460,24 @@
 
         function renderBoard() {
             const boardEl = document.getElementById('board');
+            const wrapEl = document.getElementById('tablewrap');
+
             boardEl.innerHTML = '';
 
             if (gameState.chain.length === 0) return;
 
-            const W = boardEl.clientWidth || 400;
-            const H = boardEl.clientHeight || 300;
+            const wrapRect = wrapEl.getBoundingClientRect();
+            const W = wrapRect.width - 18;
+            const H = wrapRect.height - 18;
+
+            if (W <= 0 || H <= 0) {
+                console.log('[BOARD] Dimensions invalid:', W, H);
+                return;
+            }
+
+            boardEl.style.width = W + 'px';
+            boardEl.style.height = H + 'px';
+
             const cx = W / 2;
             const cy = H / 2;
 
@@ -471,13 +485,13 @@
             const tileH = 26;
             const gap = 4;
 
-            // Simple horizontal layout
             const totalWidth = gameState.chain.length * (tileW + gap) - gap;
             let startX = cx - totalWidth / 2;
 
             gameState.chain.forEach((tile, i) => {
                 const el = document.createElement('div');
-                el.className = 'btile horiz enter';
+                const isNew = (gameState._newTilePlayed && i === gameState.chain.length - 1);
+                el.className = 'btile horiz' + (isNew ? ' enter' : '');
                 el.style.left = (startX + i * (tileW + gap)) + 'px';
                 el.style.top = (cy - tileH / 2) + 'px';
                 el.style.width = tileW + 'px';
@@ -488,6 +502,8 @@
 
                 boardEl.appendChild(el);
             });
+
+            gameState._newTilePlayed = false;
         }
 
         function handleGameOver(data) {
@@ -584,12 +600,23 @@
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
             if (!text) return;
-            socket.emit('chat-message', text);
+
+            if (!socket || !socket.connected) {
+                showToast('Koneksi terputus, tidak bisa kirim chat');
+                return;
+            }
+
+            socket.emit('chat-message', text, (ack) => {
+                if (!ack || !ack.success) {
+                    showToast('Gagal kirim chat: ' + (ack?.error || 'koneksi'));
+                }
+            });
             input.value = '';
         }
 
         function appendChatMessage(msg) {
             const container = document.getElementById('chat-messages');
+            if (!container) return;
             const div = document.createElement('div');
             div.className = 'chat-msg';
             div.innerHTML = `<span class="author">${msg.username}:</span> ${msg.text}`;

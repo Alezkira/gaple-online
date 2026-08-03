@@ -150,6 +150,10 @@ module.exports = function(io, db) {
                 room.startGame();
                 room.game = new GameManager(room.players);
 
+                console.log('[START] Game started, room:', room.code);
+                console.log('[START] Turn order: 0->1->2->3->0, opening turn:', room.game.turn);
+                console.log('[START] Players:', room.players.map(p => `${p.username}(s${p.seat},bot:${p.isBot})`).join(', '));
+
                 // Update database
                 db.prepare('UPDATE rooms SET status = ? WHERE id = ?').run('playing', socket.roomCode);
 
@@ -170,21 +174,29 @@ module.exports = function(io, db) {
                                 mySeat: index,
                                 roomCode: socket.roomCode
                             });
+                            console.log('[START] Sent hand to', player.username, 'seat:', index);
                         }
                     }
                 });
 
                 // Delay turn-start to give players time to join room on new socket
                 setTimeout(() => {
+                    const rt = room;
+                    if (!rt.game || rt.game.gameOver) {
+                        console.log('[START-TIMEOUT] Game no longer active');
+                        return;
+                    }
+                    console.log('[START-TIMEOUT] Emitting turn-start. turn:', rt.game.turn, 'player:', rt.players[rt.game.turn]?.username);
                     // Broadcast turn start
-                    io.to(socket.roomCode).emit('turn-start', {
-                        turn: room.game.turn,
-                        player: room.players[room.game.turn].username
+                    io.to(rt.code).emit('turn-start', {
+                        turn: rt.game.turn,
+                        player: rt.players[rt.game.turn].username
                     });
 
                     // Jika giliran bot, jalankan
-                    if (room.players[room.game.turn].isBot) {
-                        setTimeout(() => handleBotTurn(room, io, db), 1000);
+                    if (rt.players[rt.game.turn].isBot) {
+                        console.log('[START-TIMEOUT] First turn is bot, scheduling handleBotTurn');
+                        setTimeout(() => handleBotTurn(rt, io, db), 1000);
                     }
                 }, 2000);
 
@@ -212,6 +224,7 @@ module.exports = function(io, db) {
                 }
 
                 const result = room.game.playTile(playerSeat, tileIdx, side);
+                console.log('[PLAY]', socket.username, 'played', result.tile?.a + '-' + result.tile?.b, 'side:', result.side, 'gameOver:', result.gameOver, 'nextTurn:', result.nextTurn);
 
                 // Broadcast ke semua
                 io.to(socket.roomCode).emit('tile-played', {
@@ -295,14 +308,34 @@ module.exports = function(io, db) {
         });
 
         // CHAT MESSAGE
-        socket.on('chat-message', (text) => {
+        socket.on('chat-message', (text, callback) => {
             try {
+                if (!text || !String(text).trim()) {
+                    if (typeof callback === 'function') callback({ success: false, error: 'Pesan kosong' });
+                    return;
+                }
+
+                if (!socket.roomCode) {
+                    console.error('Chat error: socket.roomCode is null for user', socket.username);
+                    if (typeof callback === 'function') callback({ success: false, error: 'Tidak dalam room' });
+                    return;
+                }
+
                 const room = rooms.get(socket.roomCode);
 
-                if (!room) return;
+                if (!room) {
+                    console.error('Chat error: room not found for code', socket.roomCode);
+                    if (typeof callback === 'function') callback({ success: false, error: 'Room tidak ditemukan' });
+                    return;
+                }
 
                 // Sanitize
                 const cleanText = String(text).substring(0, 200).replace(/[<>]/g, '');
+
+                if (!cleanText) {
+                    if (typeof callback === 'function') callback({ success: false, error: 'Pesan kosong' });
+                    return;
+                }
 
                 const message = {
                     username: socket.username,
@@ -316,8 +349,12 @@ module.exports = function(io, db) {
                 }
 
                 io.to(socket.roomCode).emit('chat-message', message);
+                console.log('Chat:', socket.username, '->', cleanText.substring(0, 40));
+
+                if (typeof callback === 'function') callback({ success: true });
             } catch (err) {
                 console.error('Chat error:', err);
+                if (typeof callback === 'function') callback({ success: false, error: err.message });
             }
         });
 
@@ -366,19 +403,34 @@ module.exports = function(io, db) {
 
     // Helper: Handle bot turn
     function handleBotTurn(room, io, db) {
-        if (!room.game || room.game.gameOver) return;
+        console.log('[BOT] handleBotTurn called, room:', room.code, 'game exists:', !!room.game);
+        if (!room.game || room.game.gameOver) {
+            console.log('[BOT] Exiting: no game or game over');
+            return;
+        }
 
         const botIndex = room.game.turn;
         const botPlayer = room.players[botIndex];
 
-        if (!botPlayer || !botPlayer.isBot) return;
+        console.log('[BOT] botIndex:', botIndex, 'username:', botPlayer?.username, 'isBot:', botPlayer?.isBot);
+
+        if (!botPlayer || !botPlayer.isBot) {
+            console.log('[BOT] Exiting: not a bot');
+            return;
+        }
 
         const gameState = room.game.getFullState();
+        const legalMoves = Bot.getLegalMoves(gameState.hands[botIndex], gameState);
+        console.log('[BOT] hand size:', gameState.hands[botIndex].length, 'legal moves:', legalMoves.length);
+
         const move = Bot.pickMove(gameState, botIndex);
+        console.log('[BOT] picked move:', move ? `${move.tile.a}-${move.tile.b} side:${move.side}` : 'null (pass)');
 
         if (move) {
             try {
+                console.log('[BOT] Attempting playTile botIndex:', botIndex, 'tileIdx:', move.idx, 'side:', move.side);
                 const result = room.game.playTile(botIndex, move.idx, move.side);
+                console.log('[BOT] playTile success, gameOver:', result.gameOver, 'nextTurn:', result.nextTurn);
 
                 // Broadcast
                 io.to(room.code).emit('tile-played', {
@@ -412,10 +464,11 @@ module.exports = function(io, db) {
                     }
                 }
             } catch (err) {
-                console.error('Bot play error:', err);
+                console.error('[BOT] playTile error:', err.message, err.stack);
                 // Bot pass
                 try {
                     const passResult = room.game.passTurn(botIndex);
+                    console.log('[BOT] pass after error, gameOver:', passResult.gameOver);
 
                     io.to(room.code).emit('player-pass', {
                         player: botPlayer.username,
@@ -436,13 +489,15 @@ module.exports = function(io, db) {
                         }
                     }
                 } catch (passErr) {
-                    console.error('Bot pass error:', passErr);
+                    console.error('[BOT] pass error:', passErr.message, passErr.stack);
                 }
             }
         } else {
+            console.log('[BOT] No legal moves, attempting pass');
             // Bot pass
             try {
                 const passResult = room.game.passTurn(botIndex);
+                console.log('[BOT] pass success, gameOver:', passResult.gameOver);
 
                 io.to(room.code).emit('player-pass', {
                     player: botPlayer.username,
@@ -463,7 +518,7 @@ module.exports = function(io, db) {
                     }
                 }
             } catch (err) {
-                console.error('Bot pass error:', err);
+                console.error('[BOT] pass error:', err.message, err.stack);
             }
         }
     }

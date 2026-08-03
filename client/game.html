@@ -192,13 +192,13 @@ let myHand=[], myTurn=false, scores=[0,0], busy=false;
 
   socket=io({auth:{token:t}});
   socket.on('game-start',onGameStart);
+  socket.on('sync-board',onSyncBoard);
   socket.on('tile-played',onTilePlayed);
   socket.on('player-pass',onPlayerPass);
   socket.on('turn-start',onTurnStart);
   socket.on('update-hands',onUpdateHands);
   socket.on('game-over',onGameOver);
   socket.on('chat-message',onChat);
-  socket.on('room-update',()=>{});
 
   if(d){
     const data=JSON.parse(d);
@@ -211,17 +211,39 @@ let myHand=[], myTurn=false, scores=[0,0], busy=false;
 
 // ===== SOCKET HANDLERS =====
 function onGameStart(data){
-  roomCode=data.roomCode;
-  mySeat=data.mySeat;
-  players=data.players;
-  myHand=data.hand;
+  if(data.hands){
+    roomCode=data.roomCode; players=data.players;
+    if(data.mySeat!==undefined)mySeat=data.mySeat;
+    else{const me=players.find(p=>p.id===currentUser.id);if(me)mySeat=me.seat;}
+    if(mySeat!==undefined)myHand=data.hands[mySeat]||[];
+  }else if(data.hand){
+    roomCode=data.roomCode; mySeat=data.mySeat; players=data.players; myHand=data.hand;
+  }
   chain=[]; centerIdx=0; leftEnd=null; rightEnd=null; boardEmpty=true; lastPlayedIndex=0;
   scores=[0,0]; gameReady=true; busy=false;
   updatePlayerNames();
   updateScoreUI();
   renderHands(true);
   renderBoard(false);
+  updateBotFansAll();
   showToast('Game dimulai!');
+}
+
+function onSyncBoard(data){
+  chain=data.chain||[]; leftEnd=data.leftEnd; rightEnd=data.rightEnd; boardEmpty=data.boardEmpty;
+  renderBoard(false); renderHands(false);
+}
+
+function updateBotFansAll(){
+  players.forEach(p=>{
+    if(p.seat===mySeat)return;
+    const relSeat=(p.seat-mySeat+4)%4;
+    const pos={1:'right',2:'top',3:'left'}[relSeat];
+    if(!pos)return;
+    const fan=document.getElementById('fan-'+pos);
+    fan.innerHTML=''; fan.classList.remove('revealed');
+    for(let i=0;i<(p.cardCount||0);i++){const b=document.createElement('div');b.className='tileback';fan.appendChild(b);}
+  });
 }
 
 function onTilePlayed(data){

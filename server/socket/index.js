@@ -55,6 +55,39 @@ module.exports = function(io, db) {
                     socket.join(roomCode);
                     socket.roomCode = roomCode;
                     io.to(roomCode).emit('room-update', room.getPublicInfo());
+
+                    // If game is active, send current state to reconnecting player
+                    if (room.game && !room.game.gameOver) {
+                        const seat = existingPlayer.seat;
+                        const state = room.game.getFullState();
+                        socket.emit('game-start', {
+                            hand: state.hands[seat],
+                            players: room.players.map(p => ({
+                                username: p.username,
+                                seat: p.seat,
+                                isBot: p.isBot,
+                                cardCount: state.hands[p.seat].length
+                            })),
+                            turn: state.turn,
+                            mySeat: seat,
+                            roomCode: roomCode
+                        });
+                        
+                        // Send current board state
+                        socket.emit('sync-board', {
+                            chain: state.chain,
+                            leftEnd: state.leftEnd,
+                            rightEnd: state.rightEnd,
+                            boardEmpty: state.boardEmpty
+                        });
+
+                        // Send current turn
+                        socket.emit('turn-start', {
+                            turn: state.turn,
+                            player: room.players[state.turn].username
+                        });
+                    }
+
                     return callback({ success: true, room: room.getPublicInfo(), seat: existingPlayer.seat });
                 }
 
@@ -157,48 +190,38 @@ module.exports = function(io, db) {
                 // Update database
                 db.prepare('UPDATE rooms SET status = ? WHERE id = ?').run('playing', socket.roomCode);
 
-                // Kirim kartu ke masing-masing player
-                room.players.forEach((player, index) => {
-                    if (!player.isBot && player.socketId) {
-                        const playerSocket = io.sockets.sockets.get(player.socketId);
-                        if (playerSocket) {
-                            playerSocket.emit('game-start', {
-                                hand: room.game.hands[index],
-                                players: room.players.map(p => ({
-                                    username: p.username,
-                                    seat: p.seat,
-                                    isBot: p.isBot,
-                                    cardCount: room.game.hands[p.seat].length
-                                })),
-                                turn: room.game.turn,
-                                mySeat: index,
-                                roomCode: socket.roomCode
-                            });
-                            console.log('[START] Sent hand to', player.username, 'seat:', index);
-                        }
-                    }
+                // Broadcast game-start to ALL in room
+                io.to(socket.roomCode).emit('game-start', {
+                    hands: room.game.hands,
+                    players: room.players.map(p => ({
+                        id: p.id,
+                        username: p.username,
+                        seat: p.seat,
+                        isBot: p.isBot,
+                        cardCount: room.game.hands[p.seat].length
+                    })),
+                    turn: room.game.turn,
+                    roomCode: socket.roomCode
                 });
 
-                // Delay turn-start to give players time to join room on new socket
-                setTimeout(() => {
-                    const rt = room;
-                    if (!rt.game || rt.game.gameOver) {
-                        console.log('[START-TIMEOUT] Game no longer active');
-                        return;
-                    }
-                    console.log('[START-TIMEOUT] Emitting turn-start. turn:', rt.game.turn, 'player:', rt.players[rt.game.turn]?.username);
-                    // Broadcast turn start
-                    io.to(rt.code).emit('turn-start', {
-                        turn: rt.game.turn,
-                        player: rt.players[rt.game.turn].username
-                    });
+                // Send turn-start immediately
+                io.to(socket.roomCode).emit('turn-start', {
+                    turn: room.game.turn,
+                    player: room.players[room.game.turn].username
+                });
 
-                    // Jika giliran bot, jalankan
-                    if (rt.players[rt.game.turn].isBot) {
-                        console.log('[START-TIMEOUT] First turn is bot, scheduling handleBotTurn');
-                        setTimeout(() => handleBotTurn(rt, io, db), 1000);
-                    }
-                }, 2000);
+                // Update card counts
+                io.to(socket.roomCode).emit('update-hands', {
+                    hands: room.players.map((p, i) => ({
+                        seat: i,
+                        cardCount: room.game.hands[i].length
+                    }))
+                });
+
+                // Jika giliran bot, jalankan
+                if (room.players[room.game.turn].isBot) {
+                    setTimeout(() => handleBotTurn(room, io, db), 1500);
+                }
 
                 callback({ success: true });
             } catch (err) {
